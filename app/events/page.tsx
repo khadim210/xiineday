@@ -32,7 +32,6 @@ export default function EventsPage() {
   const [analysis, setAnalysis] = useState<Array<{ date: string; score: number; reasons: string[] }>>([]);
   const [selectedSlotForCreation, setSelectedSlotForCreation] = useState<{ date: string; score: number } | null>(null);
   const [userEvents, setUserEvents] = useState<UserEvent[]>([]);
-  const [userEvents, setUserEvents] = useState<UserEvent[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; message: string }>>([
     {
@@ -61,9 +60,6 @@ export default function EventsPage() {
     };
     loadWeather();
   }, [selectedLocation]);
-  useEffect(() => {
-    loadUserEvents();
-  }, [selectedLocation]);
 
   const loadUserEvents = async () => {
     try {
@@ -74,19 +70,9 @@ export default function EventsPage() {
     }
   };
 
-
   useEffect(() => {
     loadUserEvents();
   }, [selectedLocation]);
-
-  const loadUserEvents = async () => {
-    try {
-      const events = await getEvents(selectedLocation);
-      setUserEvents(events);
-    } catch (error) {
-      console.error('Error loading user events:', error);
-    }
-  };
 
   const handleAnalyze = () => {
     if (weather && selectedEventType) {
@@ -120,71 +106,12 @@ export default function EventsPage() {
     try {
       const newEvent: Omit<UserEvent, 'id' | 'created_at' | 'updated_at'> = {
         title: eventTitle,
-
-      await loadUserEvents();
         event_type: selectedEventType,
         location: selectedLocation,
         event_date: finalDate,
         description: eventDescription,
         weather_score: finalScore,
       };
-  const downloadEventWithWeather = async (event: UserEvent) => {
-    try {
-      const weatherData = await getWeather(event.location);
-      const eventDate = parseISO(event.event_date);
-      const eventDateStr = format(eventDate, 'yyyy-MM-dd');
-
-      const forecastForDate = weatherData?.forecast.find(f => f.date === eventDateStr);
-
-      const eventData = {
-        event: {
-          id: event.id,
-          title: event.title,
-          type: event.event_type,
-          location: event.location,
-          date: format(eventDate, 'PPP', { locale: fr }),
-          description: event.description || 'Aucune description',
-          weather_score: event.weather_score,
-          created_at: format(parseISO(event.created_at!), 'PPPp', { locale: fr }),
-        },
-        weather: forecastForDate ? {
-          date: eventDateStr,
-          day: forecastForDate.day,
-          condition: forecastForDate.condition,
-          temperature: {
-            min: forecastForDate.tempMin,
-            max: forecastForDate.tempMax,
-          },
-          precipitation: forecastForDate.precipitation,
-          humidity: forecastForDate.humidity,
-          windSpeed: forecastForDate.windSpeed,
-        } : weatherData?.current,
-        location_details: weatherData ? {
-          city: weatherData.city,
-          country: weatherData.country,
-          coordinates: weatherData.coordinates,
-        } : null,
-        export_date: format(new Date(), 'PPPp', { locale: fr }),
-      };
-
-      const dataStr = JSON.stringify(eventData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `evenement-${event.title.replace(/\s+/g, '-')}-${eventDateStr}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast.success('Événement téléchargé avec succès!');
-    } catch (error) {
-      toast.error('Erreur lors du téléchargement');
-      console.error(error);
-    }
-  };
-
 
       await createEvent(newEvent);
       toast.success('Événement créé avec succès!');
@@ -467,89 +394,6 @@ export default function EventsPage() {
 
               {analysis.length > 0 && (
                 <Card className="border-2">
-            <TabsContent value="events">
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle>Mes événements créés</CardTitle>
-                  <CardDescription>
-                    Liste de tous vos événements avec leurs données météo
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {userEvents.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">
-                        Aucun événement créé pour le moment
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        Créez votre premier événement dans l'onglet Recommandations
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {userEvents.map((event) => (
-                        <motion.div
-                          key={event.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="p-4 rounded-lg border-2 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-lg mb-1">{event.title}</h3>
-                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                                <div className="flex items-center gap-1">
-                                  <CalendarIcon className="h-4 w-4" />
-                                  {format(parseISO(event.event_date), 'PPP', { locale: fr })}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />
-                                  {event.location}
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              onClick={() => downloadEventWithWeather(event)}
-                              size="sm"
-                              variant="outline"
-                              className="gap-2"
-                            >
-                              <Download className="h-4 w-4" />
-                              Télécharger
-                            </Button>
-                          </div>
-
-                          {event.description && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                              {event.description}
-                            </p>
-                          )}
-
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="secondary" className="text-xs">
-                              {event.event_type}
-                            </Badge>
-                            {event.weather_score && (
-                              <Badge
-                                className={cn(
-                                  "text-xs",
-                                  event.weather_score >= 80 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" :
-                                  event.weather_score >= 60 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" :
-                                  "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                                )}
-                              >
-                                Score météo: {event.weather_score}/100
-                              </Badge>
-                            )}
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
                   <CardHeader>
                     <CardTitle>Meilleurs créneaux</CardTitle>
                     <CardDescription>
