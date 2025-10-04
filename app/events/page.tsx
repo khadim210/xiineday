@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ClimateCalendar } from '@/components/ClimateCalendar';
 import { getWeather, getEventTypes, analyzeEventSchedule, getAllLocations, WeatherData, EventType } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { format } from 'date-fns';
@@ -138,9 +137,8 @@ export default function EventsPage() {
           </div>
 
           <Tabs defaultValue="plan" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-2">
               <TabsTrigger value="plan">Recommandations</TabsTrigger>
-              <TabsTrigger value="calendar">Calendrier</TabsTrigger>
               <TabsTrigger value="chat">Chat IA</TabsTrigger>
             </TabsList>
 
@@ -303,10 +301,6 @@ export default function EventsPage() {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
-
-            <TabsContent value="calendar" className="space-y-6">
-              <ClimateCalendar location={selectedLocation} />
             </TabsContent>
 
             <TabsContent value="chat">
