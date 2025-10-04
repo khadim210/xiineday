@@ -3,25 +3,21 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { MapPin, Thermometer, Wind, Droplets, Gauge, Sun as SunIcon, Map, Globe, Navigation, Calendar as CalendarIcon } from 'lucide-react';
+import { MapPin, Wind, Droplets, Gauge, Sun as SunIcon, Map, Globe, Navigation, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { WeatherIcon } from '@/components/ui-custom/WeatherIcon';
 import { getWeather, getAllLocations, WeatherData } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
-import { format, addDays, isToday, isFuture, isPast } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 export default function WeatherPage() {
   const { selectedLocation, setSelectedLocation } = useAppStore();
   const [locations, setLocations] = useState<string[]>([]);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +40,32 @@ export default function WeatherPage() {
 
   const handleLocationChange = (value: string) => {
     setSelectedLocation(value);
+  };
+
+  const downloadWeatherData = () => {
+    if (!weather) return;
+
+    const weatherData = {
+      location: {
+        city: weather.city,
+        country: weather.country,
+        coordinates: weather.coordinates,
+      },
+      current: weather.current,
+      forecast: weather.forecast,
+      exportDate: format(new Date(), 'PPPp', { locale: fr }),
+    };
+
+    const dataStr = JSON.stringify(weatherData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `meteo-${weather.city}-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -91,35 +113,14 @@ export default function WeatherPage() {
                 </SelectContent>
               </Select>
 
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-[280px] justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : "Choisir une date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    initialFocus
-                    locale={fr}
-                    disabled={(date) => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const maxDate = addDays(today, 4);
-                      return date < today || date > maxDate;
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
+              <Button
+                onClick={downloadWeatherData}
+                variant="outline"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Télécharger les données
+              </Button>
 
               <Link href="/weather/enhanced">
                 <Button className="bg-gradient-to-r from-green-500 to-blue-500">
@@ -137,105 +138,48 @@ export default function WeatherPage() {
                   <div>
                     <CardTitle className="text-2xl text-white">{weather.city}</CardTitle>
                     <p className="text-blue-100">{weather.country}</p>
-                    {!isToday(selectedDate) && (
-                      <Badge className="mt-2 bg-white/20 text-white">
-                        {format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr })}
-                      </Badge>
-                    )}
                   </div>
-                  <WeatherIcon icon={isToday(selectedDate) ? weather.current.icon : (weather.forecast[Math.floor((selectedDate.getTime() - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24))]?.icon || weather.current.icon)} className="h-16 w-16" />
+                  <WeatherIcon icon={weather.current.icon} className="h-16 w-16" />
                 </div>
               </CardHeader>
               <CardContent>
-                {isToday(selectedDate) ? (
-                  <>
-                    <div className="flex items-baseline gap-2 mb-4">
-                      <span className="text-6xl font-bold">{weather.current.temp}°</span>
-                      <span className="text-2xl text-blue-100">
-                        Ressenti {weather.current.feelsLike}°
-                      </span>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-6xl font-bold">{weather.current.temp}°</span>
+                  <span className="text-2xl text-blue-100">
+                    Ressenti {weather.current.feelsLike}°
+                  </span>
+                </div>
+                <p className="text-xl mb-6 text-blue-100">{weather.current.condition}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 text-blue-100">
+                      <Wind className="h-4 w-4" />
+                      <span className="text-sm">Vent</span>
                     </div>
-                    <p className="text-xl mb-6 text-blue-100">{weather.current.condition}</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-blue-100">
-                          <Wind className="h-4 w-4" />
-                          <span className="text-sm">Vent</span>
-                        </div>
-                        <span className="text-lg font-semibold">{weather.current.windSpeed} km/h</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-blue-100">
-                          <Droplets className="h-4 w-4" />
-                          <span className="text-sm">Humidité</span>
-                        </div>
-                        <span className="text-lg font-semibold">{weather.current.humidity}%</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-blue-100">
-                          <Gauge className="h-4 w-4" />
-                          <span className="text-sm">Pression</span>
-                        </div>
-                        <span className="text-lg font-semibold">{weather.current.pressure} hPa</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-blue-100">
-                          <SunIcon className="h-4 w-4" />
-                          <span className="text-sm">UV Index</span>
-                        </div>
-                        <span className="text-lg font-semibold">{weather.current.uvIndex}</span>
-                      </div>
+                    <span className="text-lg font-semibold">{weather.current.windSpeed} km/h</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 text-blue-100">
+                      <Droplets className="h-4 w-4" />
+                      <span className="text-sm">Humidité</span>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    {(() => {
-                      const dayIndex = Math.floor((selectedDate.getTime() - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
-                      const forecast = weather.forecast[dayIndex];
-                      return forecast ? (
-                        <>
-                          <div className="flex items-baseline gap-2 mb-4">
-                            <span className="text-6xl font-bold">{forecast.tempMax}°</span>
-                            <span className="text-2xl text-blue-100">
-                              Min {forecast.tempMin}°
-                            </span>
-                          </div>
-                          <p className="text-xl mb-6 text-blue-100">{forecast.condition}</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 text-blue-100">
-                                <Wind className="h-4 w-4" />
-                                <span className="text-sm">Vent</span>
-                              </div>
-                              <span className="text-lg font-semibold">{forecast.windSpeed} km/h</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 text-blue-100">
-                                <Droplets className="h-4 w-4" />
-                                <span className="text-sm">Humidité</span>
-                              </div>
-                              <span className="text-lg font-semibold">{forecast.humidity}%</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 text-blue-100">
-                                <Droplets className="h-4 w-4" />
-                                <span className="text-sm">Précipitations</span>
-                              </div>
-                              <span className="text-lg font-semibold">{forecast.precipitation}%</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 text-blue-100">
-                                <Thermometer className="h-4 w-4" />
-                                <span className="text-sm">Amplitude</span>
-                              </div>
-                              <span className="text-lg font-semibold">{forecast.tempMax - forecast.tempMin}°</span>
-                            </div>
-                          </div>
-                        </>
-                      ) : null;
-                    })()}
-                  </>
-                )}
+                    <span className="text-lg font-semibold">{weather.current.humidity}%</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 text-blue-100">
+                      <Gauge className="h-4 w-4" />
+                      <span className="text-sm">Pression</span>
+                    </div>
+                    <span className="text-lg font-semibold">{weather.current.pressure} hPa</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2 text-blue-100">
+                      <SunIcon className="h-4 w-4" />
+                      <span className="text-sm">UV Index</span>
+                    </div>
+                    <span className="text-lg font-semibold">{weather.current.uvIndex}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
