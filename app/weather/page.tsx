@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WeatherIcon } from '@/components/ui-custom/WeatherIcon';
+import { EventCalendar } from '@/components/EventCalendar';
 import { getWeather, getAllLocations, WeatherData } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 
@@ -166,43 +167,51 @@ export default function WeatherPage() {
             </Card>
           </div>
 
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle>Prévisions sur 5 jours</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {weather.forecast.map((day, index) => (
-                  <motion.div
-                    key={day.date}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
-                    className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 border-2 hover:shadow-md transition-shadow"
-                  >
-                    <p className="font-semibold mb-2">{day.day}</p>
-                    <div className="flex justify-center mb-3">
-                      <WeatherIcon icon={day.icon} className="h-10 w-10 text-blue-600" />
-                    </div>
-                    <div className="text-center mb-2">
-                      <p className="text-2xl font-bold">{day.tempMax}°</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{day.tempMin}°</p>
-                    </div>
-                    <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center justify-between">
-                        <span>Pluie</span>
-                        <span className="font-semibold">{day.precipitation}%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Vent</span>
-                        <span className="font-semibold">{day.windSpeed} km/h</span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle>Prévisions sur 5 jours</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {weather.forecast.map((day, index) => (
+                      <motion.div
+                        key={day.date}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: index * 0.1 }}
+                        className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 border-2 hover:shadow-md transition-shadow"
+                      >
+                        <p className="font-semibold mb-2">{day.day}</p>
+                        <div className="flex justify-center mb-3">
+                          <WeatherIcon icon={day.icon} className="h-10 w-10 text-blue-600" />
+                        </div>
+                        <div className="text-center mb-2">
+                          <p className="text-2xl font-bold">{day.tempMax}°</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{day.tempMin}°</p>
+                        </div>
+                        <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center justify-between">
+                            <span>Pluie</span>
+                            <span className="font-semibold">{day.precipitation}%</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Vent</span>
+                            <span className="font-semibold">{day.windSpeed} km/h</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div>
+              <EventCalendar showCategories={['weather', 'agricultural']} />
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EventCalendar } from '@/components/EventCalendar';
 import { getWeather, getEventTypes, analyzeEventSchedule, getAllLocations, WeatherData, EventType } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 
@@ -131,8 +132,9 @@ export default function EventsPage() {
           </div>
 
           <Tabs defaultValue="plan" className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="plan">Recommandations</TabsTrigger>
+              <TabsTrigger value="calendar">Calendrier</TabsTrigger>
               <TabsTrigger value="chat">Chat IA</TabsTrigger>
             </TabsList>
 
@@ -263,6 +265,10 @@ export default function EventsPage() {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            <TabsContent value="calendar" className="space-y-6">
+              <EventCalendar />
             </TabsContent>
 
             <TabsContent value="chat">
