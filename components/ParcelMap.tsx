@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Parcel } from '@/lib/api';
-import { Droplets, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Droplets, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, Info } from 'lucide-react';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
