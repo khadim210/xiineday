@@ -32,6 +32,7 @@ export default function EventsPage() {
   const [analysis, setAnalysis] = useState<Array<{ date: string; score: number; reasons: string[] }>>([]);
   const [selectedSlotForCreation, setSelectedSlotForCreation] = useState<{ date: string; score: number } | null>(null);
   const [userEvents, setUserEvents] = useState<UserEvent[]>([]);
+  const [userEvents, setUserEvents] = useState<UserEvent[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; message: string }>>([
     {
@@ -60,6 +61,19 @@ export default function EventsPage() {
     };
     loadWeather();
   }, [selectedLocation]);
+  useEffect(() => {
+    loadUserEvents();
+  }, [selectedLocation]);
+
+  const loadUserEvents = async () => {
+    try {
+      const events = await getEvents(selectedLocation);
+      setUserEvents(events);
+    } catch (error) {
+      console.error('Error loading user events:', error);
+    }
+  };
+
 
   useEffect(() => {
     loadUserEvents();
@@ -106,12 +120,71 @@ export default function EventsPage() {
     try {
       const newEvent: Omit<UserEvent, 'id' | 'created_at' | 'updated_at'> = {
         title: eventTitle,
+
+      await loadUserEvents();
         event_type: selectedEventType,
         location: selectedLocation,
         event_date: finalDate,
         description: eventDescription,
         weather_score: finalScore,
       };
+  const downloadEventWithWeather = async (event: UserEvent) => {
+    try {
+      const weatherData = await getWeather(event.location);
+      const eventDate = parseISO(event.event_date);
+      const eventDateStr = format(eventDate, 'yyyy-MM-dd');
+
+      const forecastForDate = weatherData?.forecast.find(f => f.date === eventDateStr);
+
+      const eventData = {
+        event: {
+          id: event.id,
+          title: event.title,
+          type: event.event_type,
+          location: event.location,
+          date: format(eventDate, 'PPP', { locale: fr }),
+          description: event.description || 'Aucune description',
+          weather_score: event.weather_score,
+          created_at: format(parseISO(event.created_at!), 'PPPp', { locale: fr }),
+        },
+        weather: forecastForDate ? {
+          date: eventDateStr,
+          day: forecastForDate.day,
+          condition: forecastForDate.condition,
+          temperature: {
+            min: forecastForDate.tempMin,
+            max: forecastForDate.tempMax,
+          },
+          precipitation: forecastForDate.precipitation,
+          humidity: forecastForDate.humidity,
+          windSpeed: forecastForDate.windSpeed,
+        } : weatherData?.current,
+        location_details: weatherData ? {
+          city: weatherData.city,
+          country: weatherData.country,
+          coordinates: weatherData.coordinates,
+        } : null,
+        export_date: format(new Date(), 'PPPp', { locale: fr }),
+      };
+
+      const dataStr = JSON.stringify(eventData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `evenement-${event.title.replace(/\s+/g, '-')}-${eventDateStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Événement téléchargé avec succès!');
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement');
+      console.error(error);
+    }
+  };
+
 
       await createEvent(newEvent);
       toast.success('Événement créé avec succès!');
