@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EventCalendar } from '@/components/EventCalendar';
+import { ClimateCalendar } from '@/components/ClimateCalendar';
 import { getWeather, getEventTypes, analyzeEventSchedule, getAllLocations, WeatherData, EventType } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 
@@ -268,7 +268,7 @@ export default function EventsPage() {
             </TabsContent>
 
             <TabsContent value="calendar" className="space-y-6">
-              <EventCalendar />
+              <ClimateCalendar location={selectedLocation} />
             </TabsContent>
 
             <TabsContent value="chat">

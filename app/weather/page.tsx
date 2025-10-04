@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WeatherIcon } from '@/components/ui-custom/WeatherIcon';
-import { EventCalendar } from '@/components/EventCalendar';
+import { ClimateCalendar } from '@/components/ClimateCalendar';
 import { getWeather, getAllLocations, WeatherData } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 
@@ -209,7 +209,7 @@ export default function WeatherPage() {
             </div>
 
             <div>
-              <EventCalendar showCategories={['weather', 'agricultural']} />
+              <ClimateCalendar location={selectedLocation} />
             </div>
           </div>
         </motion.div>
