@@ -4,6 +4,7 @@ import mockCrops from '@/data/mockCrops.json';
 import mockZones from '@/data/mockZones.json';
 import mockTimeline from '@/data/mockTimeline.json';
 import mockParcels from '@/data/mockParcels.json';
+import mockCalendarEvents from '@/data/mockCalendarEvents.json';
 
 export interface WeatherData {
   id: number;
@@ -189,6 +190,34 @@ export async function getParcels(): Promise<Parcel[]> {
 export async function getParcelById(id: number): Promise<Parcel | undefined> {
   await new Promise(resolve => setTimeout(resolve, 200));
   return (mockParcels as Parcel[]).find(parcel => parcel.id === id);
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  category: 'agricultural' | 'weather' | 'personal' | 'reminder';
+  location?: string;
+  weatherImpact?: boolean;
+  alertWeather?: string;
+}
+
+export async function getCalendarEvents(): Promise<CalendarEvent[]> {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return mockCalendarEvents as CalendarEvent[];
+}
+
+export async function getCalendarEventsByDate(date: string): Promise<CalendarEvent[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return (mockCalendarEvents as CalendarEvent[]).filter(event => event.date === date);
+}
+
+export async function getCalendarEventsByCategory(category: string): Promise<CalendarEvent[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return (mockCalendarEvents as CalendarEvent[]).filter(event => event.category === category);
 }
 
 export function analyzeEventSchedule(

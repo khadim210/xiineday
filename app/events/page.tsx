@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Clock, ThumbsUp, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, MessageSquare } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Clock, ThumbsUp, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, MessageSquare, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,16 +10,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { getWeather, getEventTypes, analyzeEventSchedule, getAllLocations, WeatherData, EventType } from '@/lib/api';
+import { createEvent, UserEvent, getEvents } from '@/lib/supabase';
 import { useAppStore } from '@/lib/store';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function EventsPage() {
   const { selectedLocation, setSelectedLocation } = useAppStore();
   const [locations, setLocations] = useState<string[]>([]);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [selectedEventType, setSelectedEventType] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventDescription, setEventDescription] = useState('');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [analysis, setAnalysis] = useState<Array<{ date: string; score: number; reasons: string[] }>>([]);
+  const [selectedSlotForCreation, setSelectedSlotForCreation] = useState<{ date: string; score: number } | null>(null);
+  const [userEvents, setUserEvents] = useState<UserEvent[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; message: string }>>([
     {
@@ -49,6 +61,19 @@ export default function EventsPage() {
     loadWeather();
   }, [selectedLocation]);
 
+  useEffect(() => {
+    loadUserEvents();
+  }, [selectedLocation]);
+
+  const loadUserEvents = async () => {
+    try {
+      const events = await getEvents(selectedLocation);
+      setUserEvents(events);
+    } catch (error) {
+      console.error('Error loading user events:', error);
+    }
+  };
+
   const handleAnalyze = () => {
     if (weather && selectedEventType) {
       const eventType = eventTypes.find((e) => e.type === selectedEventType);
@@ -56,6 +81,107 @@ export default function EventsPage() {
         const results = analyzeEventSchedule(weather, eventType);
         setAnalysis(results);
       }
+    }
+  };
+
+  const handleCreateEvent = async (dateToUse?: string, scoreToUse?: number) => {
+    const finalDate = dateToUse || (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
+    const finalScore = scoreToUse !== undefined ? scoreToUse : undefined;
+
+    if (!eventTitle.trim()) {
+      toast.error('Veuillez entrer un titre pour l\'événement');
+      return;
+    }
+
+    if (!selectedEventType) {
+      toast.error('Veuillez sélectionner un type d\'événement');
+      return;
+    }
+
+    if (!finalDate) {
+      toast.error('Veuillez choisir une date');
+      return;
+    }
+
+    try {
+      const newEvent: Omit<UserEvent, 'id' | 'created_at' | 'updated_at'> = {
+        title: eventTitle,
+        event_type: selectedEventType,
+        location: selectedLocation,
+        event_date: finalDate,
+        description: eventDescription,
+        weather_score: finalScore,
+      };
+
+      await createEvent(newEvent);
+      toast.success('Événement créé avec succès!');
+
+      setEventTitle('');
+      setEventDescription('');
+      setSelectedDate(undefined);
+      setSelectedSlotForCreation(null);
+
+      await loadUserEvents();
+    } catch (error) {
+      toast.error('Erreur lors de la création de l\'événement');
+      console.error(error);
+    }
+  };
+
+  const downloadEventWithWeather = async (event: UserEvent) => {
+    try {
+      const weatherData = await getWeather(event.location);
+      const eventDate = parseISO(event.event_date);
+      const eventDateStr = format(eventDate, 'yyyy-MM-dd');
+
+      const forecastForDate = weatherData?.forecast.find(f => f.date === eventDateStr);
+
+      const eventData = {
+        event: {
+          id: event.id,
+          title: event.title,
+          type: event.event_type,
+          location: event.location,
+          date: format(eventDate, 'PPP', { locale: fr }),
+          description: event.description || 'Aucune description',
+          weather_score: event.weather_score,
+          created_at: format(parseISO(event.created_at!), 'PPPp', { locale: fr }),
+        },
+        weather: forecastForDate ? {
+          date: eventDateStr,
+          day: forecastForDate.day,
+          condition: forecastForDate.condition,
+          temperature: {
+            min: forecastForDate.tempMin,
+            max: forecastForDate.tempMax,
+          },
+          precipitation: forecastForDate.precipitation,
+          humidity: forecastForDate.humidity,
+          windSpeed: forecastForDate.windSpeed,
+        } : weatherData?.current,
+        location_details: weatherData ? {
+          city: weatherData.city,
+          country: weatherData.country,
+          coordinates: weatherData.coordinates,
+        } : null,
+        export_date: format(new Date(), 'PPPp', { locale: fr }),
+      };
+
+      const dataStr = JSON.stringify(eventData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `evenement-${event.title.replace(/\s+/g, '-')}-${eventDateStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Événement téléchargé avec succès!');
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement');
+      console.error(error);
     }
   };
 
@@ -131,8 +257,9 @@ export default function EventsPage() {
           </div>
 
           <Tabs defaultValue="plan" className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="plan">Recommandations</TabsTrigger>
+              <TabsTrigger value="events">Mes Événements</TabsTrigger>
               <TabsTrigger value="chat">Chat IA</TabsTrigger>
             </TabsList>
 
@@ -156,7 +283,7 @@ export default function EventsPage() {
                           {eventTypes.map((type) => (
                             <SelectItem key={type.id} value={type.type}>
                               <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
+                                <CalendarIcon className="h-4 w-4" />
                                 {type.type}
                               </div>
                             </SelectItem>
@@ -185,6 +312,58 @@ export default function EventsPage() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="event-title">Titre de l'événement</Label>
+                    <Input
+                      id="event-title"
+                      placeholder="Ex: Semis de blé parcelle A"
+                      value={eventTitle}
+                      onChange={(e) => setEventTitle(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="event-description">Description (optionnel)</Label>
+                    <Input
+                      id="event-description"
+                      placeholder="Notes ou détails supplémentaires"
+                      value={eventDescription}
+                      onChange={(e) => setEventDescription(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Date souhaitée (optionnel)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : "Choisir une date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          initialFocus
+                          locale={fr}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {selectedDate && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Date sélectionnée : {format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr })}
+                      </p>
+                    )}
+                  </div>
+
                   {selectedEventType && (
                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <h4 className="font-semibold mb-2">Conditions idéales</h4>
@@ -194,9 +373,22 @@ export default function EventsPage() {
                     </div>
                   )}
 
-                  <Button onClick={handleAnalyze} className="w-full bg-gradient-to-r from-green-500 to-blue-500">
-                    Analyser les créneaux
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleAnalyze}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Analyser les créneaux
+                    </Button>
+                    <Button
+                      onClick={() => handleCreateEvent()}
+                      className="flex-1 bg-gradient-to-r from-green-500 to-blue-500"
+                      disabled={!eventTitle || !selectedEventType || !selectedDate}
+                    >
+                      Créer l'événement
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -242,20 +434,30 @@ export default function EventsPage() {
                               ))}
                             </div>
                             {day && (
-                              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t text-sm">
-                                <div>
-                                  <span className="text-gray-600 dark:text-gray-400">Temp: </span>
-                                  <span className="font-semibold">{day.tempMax}°C</span>
+                              <>
+                                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t text-sm">
+                                  <div>
+                                    <span className="text-gray-600 dark:text-gray-400">Temp: </span>
+                                    <span className="font-semibold">{day.tempMax}°C</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600 dark:text-gray-400">Pluie: </span>
+                                    <span className="font-semibold">{day.precipitation}%</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600 dark:text-gray-400">Vent: </span>
+                                    <span className="font-semibold">{day.windSpeed} km/h</span>
+                                  </div>
                                 </div>
-                                <div>
-                                  <span className="text-gray-600 dark:text-gray-400">Pluie: </span>
-                                  <span className="font-semibold">{day.precipitation}%</span>
-                                </div>
-                                <div>
-                                  <span className="text-gray-600 dark:text-gray-400">Vent: </span>
-                                  <span className="font-semibold">{day.windSpeed} km/h</span>
-                                </div>
-                              </div>
+                                <Button
+                                  onClick={() => handleCreateEvent(result.date, result.score)}
+                                  size="sm"
+                                  className="w-full mt-3 bg-gradient-to-r from-green-500 to-blue-500"
+                                  disabled={!eventTitle}
+                                >
+                                  Créer événement pour ce créneau
+                                </Button>
+                              </>
                             )}
                           </motion.div>
                         );
@@ -263,6 +465,89 @@ export default function EventsPage() {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            <TabsContent value="events">
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle>Mes événements créés</CardTitle>
+                  <CardDescription>
+                    Liste de tous vos événements avec leurs données météo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {userEvents.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        Aucun événement créé pour le moment
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Créez votre premier événement dans l'onglet Recommandations
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {userEvents.map((event) => (
+                        <motion.div
+                          key={event.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-4 rounded-lg border-2 bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg mb-1">{event.title}</h3>
+                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                <div className="flex items-center gap-1">
+                                  <CalendarIcon className="h-4 w-4" />
+                                  {format(parseISO(event.event_date), 'PPP', { locale: fr })}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="h-4 w-4" />
+                                  {event.location}
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => downloadEventWithWeather(event)}
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                            >
+                              <Download className="h-4 w-4" />
+                              Télécharger
+                            </Button>
+                          </div>
+
+                          {event.description && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                              {event.description}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {event.event_type}
+                            </Badge>
+                            {event.weather_score && (
+                              <Badge
+                                className={cn(
+                                  "text-xs",
+                                  event.weather_score >= 80 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" :
+                                  event.weather_score >= 60 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" :
+                                  "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                                )}
+                              >
+                                Score météo: {event.weather_score}/100
+                              </Badge>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="chat">
