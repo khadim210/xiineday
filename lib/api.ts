@@ -1,8 +1,10 @@
+import mockWeather from '@/data/mockWeather.json';
 import mockEvents from '@/data/mockEvents.json';
 import mockCrops from '@/data/mockCrops.json';
 import mockZones from '@/data/mockZones.json';
 import mockTimeline from '@/data/mockTimeline.json';
 import mockParcels from '@/data/mockParcels.json';
+import mockCalendarEvents from '@/data/mockCalendarEvents.json';
 
 export interface WeatherData {
   id: number;
@@ -70,12 +72,12 @@ export interface CropData {
 
 export async function getWeather(location: string): Promise<WeatherData | undefined> {
   await new Promise(resolve => setTimeout(resolve, 300));
-  return undefined;
+  return mockWeather.find(item => item.city.toLowerCase() === location.toLowerCase());
 }
 
 export async function getAllLocations(): Promise<string[]> {
   await new Promise(resolve => setTimeout(resolve, 100));
-  return [];
+  return mockWeather.map(item => item.city);
 }
 
 export async function getEventTypes(): Promise<EventType[]> {
@@ -157,6 +159,7 @@ export async function getWeatherByZone(zoneId: number): Promise<Zone | undefined
 
 export async function getWeatherByRadius(center: [number, number], radius: number): Promise<Zone> {
   await new Promise(resolve => setTimeout(resolve, 400));
+  const nearestLocation = mockWeather[0];
   return {
     id: 999,
     name: `Zone personnalisée (${radius}m)`,
@@ -164,12 +167,12 @@ export async function getWeatherByRadius(center: [number, number], radius: numbe
     center: center,
     radius: radius,
     weatherData: {
-      temp: 22,
-      humidity: 65,
-      windSpeed: 12,
-      precipitation: 10,
-      condition: 'Ensoleillé',
-      icon: 'sun',
+      temp: nearestLocation.current.temp,
+      humidity: nearestLocation.current.humidity,
+      windSpeed: nearestLocation.current.windSpeed,
+      precipitation: nearestLocation.current.precipitation,
+      condition: nearestLocation.current.condition,
+      icon: nearestLocation.current.icon,
     }
   };
 }
@@ -189,6 +192,33 @@ export async function getParcelById(id: number): Promise<Parcel | undefined> {
   return (mockParcels as Parcel[]).find(parcel => parcel.id === id);
 }
 
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  category: 'agricultural' | 'weather' | 'personal' | 'reminder';
+  location?: string;
+  weatherImpact?: boolean;
+  alertWeather?: string;
+}
+
+export async function getCalendarEvents(): Promise<CalendarEvent[]> {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return mockCalendarEvents as CalendarEvent[];
+}
+
+export async function getCalendarEventsByDate(date: string): Promise<CalendarEvent[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return (mockCalendarEvents as CalendarEvent[]).filter(event => event.date === date);
+}
+
+export async function getCalendarEventsByCategory(category: string): Promise<CalendarEvent[]> {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  return (mockCalendarEvents as CalendarEvent[]).filter(event => event.category === category);
+}
 
 export function analyzeEventSchedule(
   weather: WeatherData,

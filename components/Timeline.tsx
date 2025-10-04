@@ -9,21 +9,19 @@ import { HourlyForecast } from '@/lib/api';
 import { WeatherIcon } from './ui-custom/WeatherIcon';
 
 interface TimelineProps {
-  forecasts?: HourlyForecast[];
-  currentIndex?: number;
-  onIndexChange?: (index: number) => void;
+  forecasts: HourlyForecast[];
+  currentIndex: number;
+  onIndexChange: (index: number) => void;
   autoPlay?: boolean;
   interval?: number;
-  selectedParcel?: any;
 }
 
 export function Timeline({
-  forecasts = [],
-  currentIndex = 0,
-  onIndexChange = () => {},
+  forecasts,
+  currentIndex,
+  onIndexChange,
   autoPlay = false,
   interval = 2000,
-  selectedParcel,
 }: TimelineProps) {
   const [isPlaying, setIsPlaying] = useState(autoPlay);
 
@@ -165,5 +163,3 @@ export function Timeline({
     </motion.div>
   );
 }
-
-export default Timeline;
