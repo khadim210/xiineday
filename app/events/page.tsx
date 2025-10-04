@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, MapPin, Clock, ThumbsUp, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, MessageSquare } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, Clock, ThumbsUp, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,15 +10,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { ClimateCalendar } from '@/components/ClimateCalendar';
 import { getWeather, getEventTypes, analyzeEventSchedule, getAllLocations, WeatherData, EventType } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export default function EventsPage() {
   const { selectedLocation, setSelectedLocation } = useAppStore();
   const [locations, setLocations] = useState<string[]>([]);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [selectedEventType, setSelectedEventType] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date>();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [analysis, setAnalysis] = useState<Array<{ date: string; score: number; reasons: string[] }>>([]);
   const [chatInput, setChatInput] = useState('');
@@ -158,7 +164,7 @@ export default function EventsPage() {
                           {eventTypes.map((type) => (
                             <SelectItem key={type.id} value={type.type}>
                               <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" />
+                                <CalendarIcon className="h-4 w-4" />
                                 {type.type}
                               </div>
                             </SelectItem>
@@ -185,6 +191,38 @@ export default function EventsPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Date souhaitée (optionnel)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : "Choisir une date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          initialFocus
+                          locale={fr}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {selectedDate && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Date sélectionnée : {format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr })}
+                      </p>
+                    )}
                   </div>
 
                   {selectedEventType && (
