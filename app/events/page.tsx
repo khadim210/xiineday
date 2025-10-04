@@ -13,10 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { getWeather, getEventTypes, analyzeEventSchedule, getAllLocations, WeatherData, EventType } from '@/lib/api';
+import { createEvent, UserEvent } from '@/lib/supabase';
 import { useAppStore } from '@/lib/store';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function EventsPage() {
   const { selectedLocation, setSelectedLocation } = useAppStore();
@@ -24,8 +26,11 @@ export default function EventsPage() {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [selectedEventType, setSelectedEventType] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>();
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventDescription, setEventDescription] = useState('');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [analysis, setAnalysis] = useState<Array<{ date: string; score: number; reasons: string[] }>>([]);
+  const [selectedSlotForCreation, setSelectedSlotForCreation] = useState<{ date: string; score: number } | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; message: string }>>([
     {
@@ -62,6 +67,48 @@ export default function EventsPage() {
         const results = analyzeEventSchedule(weather, eventType);
         setAnalysis(results);
       }
+    }
+  };
+
+  const handleCreateEvent = async (dateToUse?: string, scoreToUse?: number) => {
+    const finalDate = dateToUse || (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '');
+    const finalScore = scoreToUse !== undefined ? scoreToUse : undefined;
+
+    if (!eventTitle.trim()) {
+      toast.error('Veuillez entrer un titre pour l\'événement');
+      return;
+    }
+
+    if (!selectedEventType) {
+      toast.error('Veuillez sélectionner un type d\'événement');
+      return;
+    }
+
+    if (!finalDate) {
+      toast.error('Veuillez choisir une date');
+      return;
+    }
+
+    try {
+      const newEvent: Omit<UserEvent, 'id' | 'created_at' | 'updated_at'> = {
+        title: eventTitle,
+        event_type: selectedEventType,
+        location: selectedLocation,
+        event_date: finalDate,
+        description: eventDescription,
+        weather_score: finalScore,
+      };
+
+      await createEvent(newEvent);
+      toast.success('Événement créé avec succès!');
+
+      setEventTitle('');
+      setEventDescription('');
+      setSelectedDate(undefined);
+      setSelectedSlotForCreation(null);
+    } catch (error) {
+      toast.error('Erreur lors de la création de l\'événement');
+      console.error(error);
     }
   };
 
@@ -192,6 +239,26 @@ export default function EventsPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="event-title">Titre de l'événement</Label>
+                    <Input
+                      id="event-title"
+                      placeholder="Ex: Semis de blé parcelle A"
+                      value={eventTitle}
+                      onChange={(e) => setEventTitle(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="event-description">Description (optionnel)</Label>
+                    <Input
+                      id="event-description"
+                      placeholder="Notes ou détails supplémentaires"
+                      value={eventDescription}
+                      onChange={(e) => setEventDescription(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Date souhaitée (optionnel)</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -232,9 +299,22 @@ export default function EventsPage() {
                     </div>
                   )}
 
-                  <Button onClick={handleAnalyze} className="w-full bg-gradient-to-r from-green-500 to-blue-500">
-                    Analyser les créneaux
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleAnalyze}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Analyser les créneaux
+                    </Button>
+                    <Button
+                      onClick={() => handleCreateEvent()}
+                      className="flex-1 bg-gradient-to-r from-green-500 to-blue-500"
+                      disabled={!eventTitle || !selectedEventType || !selectedDate}
+                    >
+                      Créer l'événement
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -280,20 +360,30 @@ export default function EventsPage() {
                               ))}
                             </div>
                             {day && (
-                              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t text-sm">
-                                <div>
-                                  <span className="text-gray-600 dark:text-gray-400">Temp: </span>
-                                  <span className="font-semibold">{day.tempMax}°C</span>
+                              <>
+                                <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t text-sm">
+                                  <div>
+                                    <span className="text-gray-600 dark:text-gray-400">Temp: </span>
+                                    <span className="font-semibold">{day.tempMax}°C</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600 dark:text-gray-400">Pluie: </span>
+                                    <span className="font-semibold">{day.precipitation}%</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600 dark:text-gray-400">Vent: </span>
+                                    <span className="font-semibold">{day.windSpeed} km/h</span>
+                                  </div>
                                 </div>
-                                <div>
-                                  <span className="text-gray-600 dark:text-gray-400">Pluie: </span>
-                                  <span className="font-semibold">{day.precipitation}%</span>
-                                </div>
-                                <div>
-                                  <span className="text-gray-600 dark:text-gray-400">Vent: </span>
-                                  <span className="font-semibold">{day.windSpeed} km/h</span>
-                                </div>
-                              </div>
+                                <Button
+                                  onClick={() => handleCreateEvent(result.date, result.score)}
+                                  size="sm"
+                                  className="w-full mt-3 bg-gradient-to-r from-green-500 to-blue-500"
+                                  disabled={!eventTitle}
+                                >
+                                  Créer événement pour ce créneau
+                                </Button>
+                              </>
                             )}
                           </motion.div>
                         );

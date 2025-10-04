@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, MapPin, Clock } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getEvents, UserEvent } from '@/lib/supabase';
 
 type EventCategory = 'agricultural' | 'weather' | 'personal' | 'reminder';
 
@@ -84,10 +85,49 @@ interface EventCalendarProps {
 export function EventCalendar({ compact = false, showCategories }: EventCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [userEvents, setUserEvents] = useState<UserEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserEvents();
+  }, [currentMonth]);
+
+  const loadUserEvents = async () => {
+    try {
+      setLoading(true);
+      const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+      const events = await getEvents(undefined, monthStart, monthEnd);
+      setUserEvents(events);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const convertUserEventToCalendarEvent = (userEvent: UserEvent): CalendarEvent => {
+    return {
+      id: userEvent.id || '',
+      title: userEvent.title,
+      description: userEvent.description || '',
+      date: parseISO(userEvent.event_date),
+      startTime: '08:00',
+      endTime: '17:00',
+      category: 'agricultural',
+      location: userEvent.location,
+      weatherImpact: true,
+    };
+  };
+
+  const allEvents = [
+    ...mockEvents,
+    ...userEvents.map(convertUserEventToCalendarEvent),
+  ];
 
   const filteredEvents = showCategories
-    ? mockEvents.filter(e => showCategories.includes(e.category))
-    : mockEvents;
+    ? allEvents.filter(e => showCategories.includes(e.category))
+    : allEvents;
 
   const getEventsForDate = (date: Date) => {
     return filteredEvents.filter((event) => isSameDay(event.date, date));
@@ -201,7 +241,12 @@ export function EventCalendar({ compact = false, showCategories }: EventCalendar
                   animate={{ opacity: 1, x: 0 }}
                   className={`p-3 rounded-lg border-l-4 ${categoryColors[event.category].bg} ${categoryColors[event.category].border}`}
                 >
-                  <div className="font-semibold text-sm mb-1">{event.title}</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="font-semibold text-sm">{event.title}</div>
+                    <Badge className="text-xs bg-gradient-to-r from-green-500 to-blue-500">
+                      Événement créé
+                    </Badge>
+                  </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                     {event.description}
                   </div>
