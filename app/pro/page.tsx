@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getWeather, getCrops, getAllLocations, WeatherData, CropData } from '@/lib/api';
+import { DynamicParcelMap as ParcelMap } from '@/components/DynamicParcelMap';
+import { getWeather, getCrops, getAllLocations, getParcels, WeatherData, CropData, Parcel } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 
 export default function ProPage() {
@@ -17,13 +18,17 @@ export default function ProPage() {
   const [crops, setCrops] = useState<CropData[]>([]);
   const [selectedCrop, setSelectedCrop] = useState<CropData | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       const locs = await getAllLocations();
       const cropsData = await getCrops();
+      const parcelsData = await getParcels();
       setLocations(locs);
       setCrops(cropsData);
+      setParcels(parcelsData);
       if (cropsData.length > 0) {
         setSelectedCrop(cropsData[0]);
       }
@@ -192,12 +197,115 @@ export default function ProPage() {
             </Card>
           </div>
 
-          <Tabs defaultValue="irrigation" className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-3">
+          <Tabs defaultValue="parcels" className="space-y-6">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+              <TabsTrigger value="parcels">Parcelles</TabsTrigger>
               <TabsTrigger value="irrigation">Arrosage</TabsTrigger>
               <TabsTrigger value="crops">Cultures</TabsTrigger>
               <TabsTrigger value="alerts">Alertes</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="parcels" className="space-y-6">
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle>Carte des parcelles agricoles</CardTitle>
+                  <CardDescription>
+                    Visualisez vos parcelles et leurs besoins d'arrosage en temps réel
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ParcelMap
+                    parcels={parcels}
+                    selectedParcel={selectedParcel}
+                    onParcelSelect={setSelectedParcel}
+                  />
+                </CardContent>
+              </Card>
+
+              {selectedParcel && (
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card className="border-2">
+                    <CardHeader>
+                      <CardTitle>{selectedParcel.name}</CardTitle>
+                      <CardDescription>{selectedParcel.crop} - {selectedParcel.area} ha</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Humidité du sol</p>
+                          <p className="text-2xl font-bold">{selectedParcel.soilMoisture}%</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Besoin d'arrosage</p>
+                          <p className="text-2xl font-bold">{selectedParcel.irrigationNeed}%</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t">
+                        <p className="font-semibold mb-2">Dates importantes</p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Plantation:</span>
+                            <span className="font-medium">{new Date(selectedParcel.plantingDate).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Récolte prévue:</span>
+                            <span className="font-medium">{new Date(selectedParcel.expectedHarvest).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-2">
+                    <CardHeader>
+                      <CardTitle>Recommandations</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <p className="font-semibold text-sm mb-1">Irrigation</p>
+                        <p className="text-sm">{selectedParcel.recommendations.irrigation}</p>
+                      </div>
+
+                      <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <p className="font-semibold text-sm mb-1">Meilleur moment</p>
+                        <p className="text-sm">{selectedParcel.recommendations.timing}</p>
+                      </div>
+
+                      <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                        <p className="font-semibold text-sm mb-1">Niveau de risque</p>
+                        <p className="text-sm">{selectedParcel.recommendations.risk}</p>
+                      </div>
+
+                      {selectedParcel.alerts.length > 0 && (
+                        <div className="pt-4 border-t">
+                          <p className="font-semibold mb-2 flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-orange-500" />
+                            Alertes actives
+                          </p>
+                          <div className="space-y-2">
+                            {selectedParcel.alerts.map((alert, i) => (
+                              <div
+                                key={i}
+                                className={`p-3 rounded-lg text-sm ${
+                                  alert.type === 'warning'
+                                    ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500'
+                                    : alert.type === 'success'
+                                    ? 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500'
+                                    : 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500'
+                                }`}
+                              >
+                                {alert.message}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value="irrigation" className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">

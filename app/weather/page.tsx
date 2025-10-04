@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Thermometer, Wind, Droplets, Gauge, Sun as SunIcon } from 'lucide-react';
+import Link from 'next/link';
+import { MapPin, Thermometer, Wind, Droplets, Gauge, Sun as SunIcon, Map } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -66,7 +67,7 @@ export default function WeatherPage() {
             <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
               Prévisions météo
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <Select value={selectedLocation} onValueChange={handleLocationChange}>
                 <SelectTrigger className="w-[250px]">
                   <SelectValue />
@@ -82,6 +83,13 @@ export default function WeatherPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Link href="/weather/enhanced">
+                <Button className="bg-gradient-to-r from-green-500 to-blue-500">
+                  <Map className="h-4 w-4 mr-2" />
+                  Vue Interactive
+                </Button>
+              </Link>
             </div>
           </div>
 

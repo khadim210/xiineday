@@ -1,6 +1,9 @@
 import mockWeather from '@/data/mockWeather.json';
 import mockEvents from '@/data/mockEvents.json';
 import mockCrops from '@/data/mockCrops.json';
+import mockZones from '@/data/mockZones.json';
+import mockTimeline from '@/data/mockTimeline.json';
+import mockParcels from '@/data/mockParcels.json';
 
 export interface WeatherData {
   id: number;
@@ -89,6 +92,103 @@ export async function getCrops(): Promise<CropData[]> {
 export async function getCropById(id: number): Promise<CropData | undefined> {
   await new Promise(resolve => setTimeout(resolve, 100));
   return mockCrops.find(crop => crop.id === id);
+}
+
+export interface Zone {
+  id: number;
+  name: string;
+  type: 'polygon' | 'circle';
+  coordinates?: number[][];
+  center?: number[];
+  radius?: number;
+  weatherData: {
+    temp: number;
+    humidity: number;
+    windSpeed: number;
+    precipitation: number;
+    condition: string;
+    icon: string;
+  };
+}
+
+export interface HourlyForecast {
+  timestamp: string;
+  hour: string;
+  temp: number;
+  humidity: number;
+  windSpeed: number;
+  precipitation: number;
+  condition: string;
+  icon: string;
+}
+
+export interface TimelineData {
+  locationId: number;
+  location: string;
+  hourlyForecast: HourlyForecast[];
+}
+
+export interface Parcel {
+  id: number;
+  name: string;
+  crop: string;
+  coordinates: number[][];
+  area: number;
+  plantingDate: string;
+  expectedHarvest: string;
+  soilMoisture: number;
+  irrigationNeed: number;
+  alerts: Array<{ type: string; message: string }>;
+  recommendations: {
+    irrigation: string;
+    timing: string;
+    risk: string;
+  };
+}
+
+export async function getZones(): Promise<Zone[]> {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockZones as Zone[];
+}
+
+export async function getWeatherByZone(zoneId: number): Promise<Zone | undefined> {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return (mockZones as Zone[]).find(zone => zone.id === zoneId);
+}
+
+export async function getWeatherByRadius(center: [number, number], radius: number): Promise<Zone> {
+  await new Promise(resolve => setTimeout(resolve, 400));
+  const nearestLocation = mockWeather[0];
+  return {
+    id: 999,
+    name: `Zone personnalisée (${radius}m)`,
+    type: 'circle',
+    center: center,
+    radius: radius,
+    weatherData: {
+      temp: nearestLocation.current.temp,
+      humidity: nearestLocation.current.humidity,
+      windSpeed: nearestLocation.current.windSpeed,
+      precipitation: nearestLocation.current.precipitation,
+      condition: nearestLocation.current.condition,
+      icon: nearestLocation.current.icon,
+    }
+  };
+}
+
+export async function getWeatherTimeline(locationId: number): Promise<TimelineData | undefined> {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return (mockTimeline as TimelineData[]).find(t => t.locationId === locationId);
+}
+
+export async function getParcels(): Promise<Parcel[]> {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockParcels as Parcel[];
+}
+
+export async function getParcelById(id: number): Promise<Parcel | undefined> {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  return (mockParcels as Parcel[]).find(parcel => parcel.id === id);
 }
 
 export function analyzeEventSchedule(
