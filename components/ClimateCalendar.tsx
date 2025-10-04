@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, AlertTriangle, Droplets, Wind, Thermometer, Sun, Cloud, CloudRain, CloudSnow } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TriangleAlert as AlertTriangle, Droplets, Wind, Thermometer, Sun, Cloud, CloudRain, CloudSnow } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
