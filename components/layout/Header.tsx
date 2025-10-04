@@ -24,6 +24,7 @@ export function Header() {
   const navItems = [
     { href: '/', label: 'Accueil' },
     { href: '/weather', label: 'Météo' },
+    { href: '/calendar', label: 'Calendrier' },
     { href: '/events', label: 'Événements' },
     { href: '/pro', label: 'Pro' },
   ];
