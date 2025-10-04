@@ -16,7 +16,7 @@ L.Icon.Default.mergeOptions({
 });
 
 interface ParcelMapProps {
-  parcels: Parcel[];
+  parcels?: Parcel[];
   selectedParcel?: Parcel | null;
   onParcelSelect?: (parcel: Parcel) => void;
   center?: [number, number];
@@ -32,7 +32,7 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 }
 
 export function ParcelMap({
-  parcels,
+  parcels = [],
   selectedParcel,
   onParcelSelect,
   center = [14.7886, -16.9261],
@@ -84,7 +84,7 @@ export function ParcelMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {parcels.map((parcel) => {
+        {parcels && parcels.map((parcel) => {
           const positions = parcel.coordinates.map(coord => [coord[0], coord[1]] as [number, number]);
           const centerLat = positions.reduce((sum, pos) => sum + pos[0], 0) / positions.length;
           const centerLng = positions.reduce((sum, pos) => sum + pos[1], 0) / positions.length;

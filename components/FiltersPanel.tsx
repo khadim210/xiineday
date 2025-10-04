@@ -19,13 +19,26 @@ export interface WeatherFilters {
 }
 
 interface FiltersPanelProps {
-  filters: WeatherFilters;
-  onFiltersChange: (filters: WeatherFilters) => void;
-  isOpen: boolean;
-  onToggle: () => void;
+  filters?: WeatherFilters;
+  onFiltersChange?: (filters: WeatherFilters) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
-export function FiltersPanel({ filters, onFiltersChange, isOpen, onToggle }: FiltersPanelProps) {
+const defaultFilters: WeatherFilters = {
+  tempMin: 10,
+  tempMax: 35,
+  rainIntensity: 'any',
+  windMax: 50,
+  timeOfDay: ['morning', 'afternoon', 'evening'],
+};
+
+export function FiltersPanel({
+  filters = defaultFilters,
+  onFiltersChange = () => {},
+  isOpen = true,
+  onToggle = () => {}
+}: FiltersPanelProps) {
   const [localFilters, setLocalFilters] = useState<WeatherFilters>(filters);
 
   const handleTempMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,3 +287,5 @@ export function FiltersPanel({ filters, onFiltersChange, isOpen, onToggle }: Fil
     </>
   );
 }
+
+export default FiltersPanel;
